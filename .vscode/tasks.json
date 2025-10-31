@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Server: Dev (Fastify)",
+      "type": "shell",
+      "command": "pnpm -C apps/server dev",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev",
+        "clear": true
+      }
+    },
+    {
+      "label": "App: Dev (Expo Web)",
+      "type": "shell",
+      "command": "pnpm -C apps/travila dev -- --web",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "dev",
+        "clear": true
+      }
+    },
+    {
+      "label": "Dev: Server + Web (Compound)",
+      "dependsOn": [
+        "Server: Dev (Fastify)",
+        "App: Dev (Expo Web)"
+      ],
+      "dependsOrder": "parallel"
+    }
+  ]
+}

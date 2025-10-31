@@ -1,15 +1,18 @@
+// apps/server/src/services/openai.ts
 import OpenAI from 'openai';
 import { env } from '../env';
 
-export const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+let _client: OpenAI | null = null;
 
-export const OPENAI_MODEL = env.OPENAI_MODEL; // es. 'gpt-4o-mini'
-
-export async function generateText(prompt: string){
-  const res = await openai.chat.completions.create({
-    model: 'gpt-5-turbo',
-    messages: [{ role: 'system', content: 'You are a helpful travel planner.' }, { role: 'user', content: prompt }],
-    temperature: 0.7,
-  });
-  return res.choices[0]?.message?.content || '';
+export function getOpenAI(): OpenAI {
+  if (!_client) {
+    if (!env.OPENAI_API_KEY) {
+      // Throw esplicito e leggibile se manca la chiave
+      throw new Error('OPENAI_API_KEY is missing (apps/server/.env)');
+    }
+    _client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  }
+  return _client;
 }
+
+export const OPENAI_MODEL = env.OPENAI_MODEL;

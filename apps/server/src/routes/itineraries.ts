@@ -1,22 +1,21 @@
 // apps/server/src/routes/itineraries.ts
 import { FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
-import { openai, OPENAI_MODEL } from '../services/openai';
+import { getOpenAI, OPENAI_MODEL } from '../services/openai';
 import { FastItinerarySchema } from '../utils/fast-schema';
 
+/** Validazione del body della richiesta */
 const bodySchema = z.object({
   locale: z.union([z.literal('it'), z.literal('en')]).default('it'),
   city: z.string().trim().min(1, 'city required'),
   days: z.coerce.number().int().min(1, 'days must be >= 1').max(14, 'days must be <= 14'),
 });
 
+/** Prompt system: forza il modello a restituire SOLO JSON */
 const SYSTEM = `You are a senior travel planner that outputs ONLY strict JSON.
 Do not include any prose, code fences, or explanations outside JSON.`;
 
-/**
- * Prompt “a binari” che descrive lo schema richiesto.
- * L'LLM deve solo compilare i campi rispettando la lingua richiesta.
- */
+/** Prompt utente “a binari” con descrizione dello schema richiesto */
 function makePrompt(locale: 'it' | 'en', city: string, days: number) {
   const schema = {
     schemaVersion: '1.0',
@@ -88,7 +87,7 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
    * Ritorna: JSON conforme a FastItinerarySchema
    */
   app.post('/itineraries/fast', async (req, reply) => {
-    // 1) Validazione input
+    // 1) Validazione input (400 in caso di errore)
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
       reply.code(400);
@@ -96,13 +95,15 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
     }
     const { locale, city, days } = parsed.data;
 
-    let raw = '';
+    // 2) Ottieni il client OpenAI (lazy init, così .env è già caricato)
+    const openai = getOpenAI();
 
+    let raw = '';
     try {
-      // 2) Tentativo con JSON mode (modelli che lo supportano)
+      // 3) Tentativo con JSON mode (modelli che lo supportano)
       try {
         const completion = await openai.chat.completions.create({
-          model: OPENAI_MODEL, // es. gpt-4o-mini (configurabile via .env)
+          model: OPENAI_MODEL, // es. gpt-4o-mini, configurabile via .env
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: SYSTEM },
@@ -112,7 +113,7 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
         });
         raw = completion.choices[0]?.message?.content?.trim() ?? '';
       } catch {
-        // 3) Fallback: alcuni modelli non supportano response_format
+        // 4) Fallback: alcuni modelli non supportano response_format
         const completion = await openai.chat.completions.create({
           model: OPENAI_MODEL,
           messages: [
@@ -124,7 +125,7 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
         raw = completion.choices[0]?.message?.content?.trim() ?? '';
       }
 
-      // 4) Parse JSON
+      // 5) Parse JSON (502 se non valido)
       let parsedJson: unknown;
       try {
         parsedJson = JSON.parse(raw);
@@ -133,24 +134,24 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
         return { error: 'LLM_JSON_INVALID', message: 'Output non JSON', raw };
       }
 
-      // 5) Validazione schema
+      // 6) Validazione schema (502 se mismatch)
       const validated = FastItinerarySchema.safeParse(parsedJson);
       if (!validated.success) {
         reply.code(502);
         return { error: 'LLM_SCHEMA_MISMATCH', issues: validated.error.format(), raw };
       }
 
-      // 6) OK
+      // 7) OK
       return validated.data;
     } catch (err: any) {
-      // 7) Errori rete/LLM
+      // 8) Errori rete/LLM
       app.log.error({ err }, 'OPENAI_ERROR');
       reply.code(502);
       return { error: 'OPENAI_ERROR', message: err?.message ?? 'Unknown error' };
     }
   });
 
-  // Stub PRO (resta invariato per ora)
+  /** Stub PRO (rimane per sviluppo futuro) */
   app.post('/itineraries/pro', async (_req, _reply) => {
     return { content: 'TODO: PRO' };
   });

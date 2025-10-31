@@ -8,6 +8,9 @@ import itineraries from './routes/itineraries';
 import guides from './routes/guides';
 import flights from './routes/flights';
 
+// eslint-disable-next-line no-console
+console.log('CWD:', process.cwd());
+
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: env.CORS_ORIGIN.split(',') });
 app.register(health, { prefix: '/api' });
