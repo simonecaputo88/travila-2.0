@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Travila 2.0",
+    "slug": "travila-2-0",
+    "scheme": "travila",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

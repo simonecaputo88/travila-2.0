@@ -1,0 +1,28 @@
+# Normalizza i finali di riga (LF nel repo)
+* text=auto eol=lf
+
+# File di testo tipici
+*.js   text
+*.ts   text
+*.tsx  text
+*.json text
+*.md   text
+*.yml  text
+*.yaml text
+*.css  text
+*.html text
+*.sh   text eol=lf
+*.bat  text eol=crlf
+
+# Binari (no diff)
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.svg  text
+*.ico  binary
+*.ttf  binary
+*.otf  binary
+*.woff binary
+*.woff2 binary
+*.zip  binary

@@ -1,0 +1,39 @@
+# -------- Monorepo Node/Expo/Fastify --------
+node_modules/
+.pnpm-store/
+.temp/
+.cache/
+.tmp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Env ---
+.env
+apps/server/.env
+apps/travila/.env
+
+# --- Build / Dist ---
+dist/
+build/
+coverage/
+
+# --- App server ---
+apps/server/dist/
+
+# --- Expo/React Native ---
+.expo/
+.expo-shared/
+apps/travila/.expo/
+apps/travila/.expo-shared/
+apps/travila/web-build/
+apps/travila/android/
+apps/travila/ios/
+
+# --- OS/Editor ---
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+.idea/

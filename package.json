@@ -1,0 +1,20 @@
+{
+  "name": "travila-2.0",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n SERVER,APP -c blue,magenta \"pnpm -C apps/server dev\" \"pnpm -C apps/travila dev\"",
+    "dev:server": "pnpm -C apps/server dev",
+    "dev:app": "pnpm -C apps/travila dev",
+    "web": "pnpm -C apps/travila web",
+    "android": "pnpm -C apps/travila android",
+    "ios": "pnpm -C apps/travila ios"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
