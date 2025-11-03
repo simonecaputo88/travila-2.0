@@ -129,7 +129,7 @@ export default function FastItineraryPage() {
   }
 
   return (
-    <Box sx={{ bgcolor: "background.default", minHeight: "100vh" }}>
+    <Box sx={{ bgcolor: "background.default", minHeight: "100vh", overflowY: "auto" }}>
       {/* Header sticky con info tooltip a destra */}
       <Header
         right={
