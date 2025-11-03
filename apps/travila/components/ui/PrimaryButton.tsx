@@ -1,39 +1,21 @@
-// apps/travila/components/ui/PrimaryButton.tsx
-import { Pressable, Text, PressableProps, StyleProp, ViewStyle } from "react-native";
-import { theme } from "../../theme";
+import * as React from "react";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 
-type Props = Omit<PressableProps, "children" | "style"> & {
-  title: string;
+type Props = React.ComponentProps<typeof Button> & {
   loading?: boolean;
-  style?: StyleProp<ViewStyle>;
 };
 
-export function PrimaryButton({
-  title,
-  loading,
-  disabled,
-  style: styleProp,
-  ...rest
-}: Props) {
-  const baseStyle: ViewStyle = {
-    height: 48,
-    borderRadius: theme.radius.lg,
-    backgroundColor: disabled || loading ? "#8ec5ff" : theme.colors.blue,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: theme.spacing(2),
-  };
-
+export default function PrimaryButton({ loading, children, ...rest }: Props) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      disabled={disabled || loading}
-      style={[baseStyle, styleProp]}
+    <Button
+      variant="contained"
+      color="primary"
+      sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
       {...rest}
+      disabled={loading || rest.disabled}
     >
-      <Text style={{ color: theme.colors.white, fontWeight: "600" }}>
-        {loading ? "Caricamento…" : title}
-      </Text>
-    </Pressable>
+      {loading ? <CircularProgress size={18} sx={{ color: "white" }} /> : children}
+    </Button>
   );
 }

@@ -1,26 +1,21 @@
-// apps/travila/components/ui/Card.tsx
-import { View, ViewProps, StyleProp, ViewStyle } from "react-native";
-import { theme } from "../../theme";
+import * as React from "react";
+import MUICard from "@mui/material/Card";
+import CardHeader from "@mui/material/CardHeader";
+import CardContent from "@mui/material/CardContent";
+import CardActions from "@mui/material/CardActions";
 
-type CardProps = Omit<ViewProps, "style"> & {
-  style?: StyleProp<ViewStyle>;
+type Props = React.ComponentProps<typeof MUICard> & {
+  headerTitle?: React.ReactNode;
+  headerAction?: React.ReactNode;
 };
 
-export function Card({ style, ...rest }: CardProps) {
+export default function Card({ headerTitle, headerAction, children, ...rest }: Props) {
   return (
-    <View
-      style={[
-        {
-          backgroundColor: theme.colors.white,
-          borderRadius: theme.radius.xl,
-          padding: theme.spacing(2),
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          ...theme.shadow.card,
-        },
-        style,
-      ]}
-      {...rest}
-    />
+    <MUICard elevation={2} sx={{ borderRadius: 3 }} {...rest}>
+      {headerTitle && <CardHeader title={headerTitle} action={headerAction} />}
+      <CardContent>{children}</CardContent>
+    </MUICard>
   );
 }
+
+export { CardContent, CardActions, CardHeader };
