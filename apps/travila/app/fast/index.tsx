@@ -1,152 +1,279 @@
 // apps/travila/app/fast/index.tsx
-import { useState, useMemo } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import { useMemo, useState } from "react";
+import { View, Text, TextInput, ScrollView, ActivityIndicator } from "react-native";
+import { Card } from "../../components/ui/Card";
+import { PrimaryButton } from "../../components/ui/PrimaryButton";
+import { theme } from "../../theme";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL || "http://localhost:3333";
+type LanguageCode = "it" | "en";
 
-type LanguageCode = 'it' | 'en';
-type FastItinerary = {
-  schemaVersion: '1.0';
+type MonthlyClimate = { month: string; tMinC: number; tMaxC: number; precipitationMm: number };
+type CouplePlan = { day: number; morning: string; lunch: string; afternoon: string; dinner: string; night: string; notes?: string };
+
+type FastV2 = {
+  schemaVersion: "2.0";
   locale: LanguageCode;
   city: string;
   country: string;
-  days: number;
   summary: string;
-  highlights: { title: string; description: string }[];
+  highlights: { title: string; description: string; coords?: { lat: number; lon: number } | null; imageHint?: string }[];
   typicalDishes: { name: string; description: string }[];
-  weather: { bestMonthsHint: string; temperatureHint: string; rainHint: string };
   practicalTips: string[];
+  monthlyClimate: MonthlyClimate[];
+  currency: { name: string; code: string; symbol: string; fxHint?: string };
+  entryRequirements: {
+    passportRequired: boolean;
+    visaRequired: boolean;
+    eVisaAvailable?: boolean;
+    stayWithoutVisaDays?: number;
+    notes?: string;
+    sources?: string[];
+  };
+  health: {
+    vaccines?: { name: string; required: boolean; recommendation: string }[];
+    travelAdvisories?: string[];
+    sources?: string[];
+  };
+  officialSites?: { label: string; url: string }[];
+  coupleItinerary: { days: number; plan: CouplePlan[] };
+  recommendedDays: number;
+  weather: { bestMonthsHint: string; temperatureHint: string; rainHint: string };
 };
 
-export default function FastBare() {
-  // ✅ Valori iniziali utili al test
+export default function FastV2Page() {
   const [city, setCity] = useState("Roma");
   const [days, setDays] = useState("3");
   const [locale, setLocale] = useState<LanguageCode>("it");
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<FastItinerary | null>(null);
+  const [data, setData] = useState<FastV2 | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const valid = useMemo(() => city.trim().length >= 1 && Number(days) >= 1, [city, days]);
 
   async function onGenerate() {
-    // ✅ Guardie lato client
     if (!valid) {
-      setError("Inserisci una città e un numero di giorni valido (>=1).");
+      setError("Inserisci una città e giorni (>=1).");
       return;
     }
-    setLoading(true);
-    setError(null);
-    setData(null);
+    setLoading(true); setError(null); setData(null);
     try {
       const res = await fetch(`${API_BASE}/api/itineraries/fast`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locale,
-          city: city.trim(),
-          days: Number(days),
-        }),
+        body: JSON.stringify({ locale, city: city.trim(), days: Number(days) }),
       });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(`HTTP ${res.status}: ${txt}`);
       }
-      const json = (await res.json()) as FastItinerary;
+      const json = (await res.json()) as FastV2;
       setData(json);
     } catch (e: any) {
       setError(e?.message ?? "Request failed");
-      console.error(e);
     } finally {
       setLoading(false);
     }
   }
 
-  const btn = `rounded-2xl px-12 py-12 items-center justify-center ${valid ? "bg-blue-600" : "bg-blue-300"}`;
-  const btnSm = "rounded-2xl px-3 py-2 items-center justify-center bg-blue-600";
-  const btnGhost = "rounded-2xl px-3 py-2 items-center justify-center border border-black/10";
-  const input = "rounded-2xl border border-black/10 bg-white px-3 py-2";
-
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-      <Text style={{ fontSize: 22, fontWeight: "700" }}>Itinerario Fast (bare)</Text>
+    <ScrollView contentContainerStyle={{ padding: theme.spacing(2), gap: theme.spacing(2) }}>
+      {/* Hero */}
+      <Card>
+        <Text style={{ fontSize: 22, fontWeight: "700", color: theme.colors.text }}>Itinerario Fast</Text>
+        <Text style={{ color: "#394046", marginTop: 6 }}>
+          Genera un itinerario base con info essenziali sulla destinazione.
+        </Text>
+      </Card>
 
-      <View style={{ gap: 8 }}>
-        <Text>Città</Text>
-        <TextInput
-          className={input}
-          placeholder="Roma"
-          value={city}
-          onChangeText={setCity}
-        />
-      </View>
+      {/* Form */}
+      <Card>
+        <View style={{ gap: theme.spacing(2) }}>
+          <View>
+            <Text style={{ color: "#394046", marginBottom: 6 }}>Città</Text>
+            <TextInput
+              placeholder="Roma"
+              placeholderTextColor={theme.colors.gray}
+              value={city}
+              onChangeText={setCity}
+              style={{
+                backgroundColor: theme.colors.white,
+                borderWidth: 1, borderColor: theme.colors.border,
+                borderRadius: theme.radius.lg,
+                paddingHorizontal: theme.spacing(2),
+                paddingVertical: 12,
+                color: theme.colors.text,
+              }}
+            />
+          </View>
 
-      <View style={{ gap: 8 }}>
-        <Text>Giorni</Text>
-        <TextInput
-          className={input}
-          placeholder="3"
-          keyboardType="numeric"
-          value={days}
-          onChangeText={setDays}
-        />
-      </View>
+          <View>
+            <Text style={{ color: "#394046", marginBottom: 6 }}>Giorni</Text>
+            <TextInput
+              placeholder="3"
+              placeholderTextColor={theme.colors.gray}
+              value={days}
+              onChangeText={setDays}
+              keyboardType="numeric"
+              style={{
+                backgroundColor: theme.colors.white,
+                borderWidth: 1, borderColor: theme.colors.border,
+                borderRadius: theme.radius.lg,
+                paddingHorizontal: theme.spacing(2),
+                paddingVertical: 12,
+                color: theme.colors.text,
+              }}
+            />
+          </View>
 
-      <View style={{ gap: 8 }}>
-        <Text>Lingua</Text>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <Pressable className={locale === "it" ? btnSm : btnGhost} onPress={() => setLocale("it")}>
-            <Text style={{ color: locale === "it" ? "#fff" : "#000" }}>Italiano</Text>
-          </Pressable>
-          <Pressable className={locale === "en" ? btnSm : btnGhost} onPress={() => setLocale("en")}>
-            <Text style={{ color: locale === "en" ? "#fff" : "#000" }}>English</Text>
-          </Pressable>
+          <View>
+            <Text style={{ color: "#394046", marginBottom: 6 }}>Lingua</Text>
+            <View style={{ flexDirection: "row", gap: theme.spacing(1) }}>
+              <View
+                style={{
+                  paddingHorizontal: theme.spacing(1.5),
+                  paddingVertical: theme.spacing(1),
+                  borderRadius: 999,
+                  backgroundColor: locale === "it" ? theme.colors.blue : theme.colors.white,
+                  borderWidth: 1, borderColor: theme.colors.border,
+                }}
+              >
+                <Text
+                  onPress={() => setLocale("it")}
+                  style={{ color: locale === "it" ? theme.colors.white : theme.colors.text }}
+                >
+                  Italiano
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  paddingHorizontal: theme.spacing(1.5),
+                  paddingVertical: theme.spacing(1),
+                  borderRadius: 999,
+                  backgroundColor: locale === "en" ? theme.colors.blue : theme.colors.white,
+                  borderWidth: 1, borderColor: theme.colors.border,
+                }}
+              >
+                <Text
+                  onPress={() => setLocale("en")}
+                  style={{ color: locale === "en" ? theme.colors.white : theme.colors.text }}
+                >
+                  English
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <PrimaryButton title="Genera Itinerario" onPress={onGenerate} disabled={!valid || loading} />
+          {error && <Text style={{ color: theme.colors.danger }}>{error}</Text>}
+          {loading && (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing(1) }}>
+              <ActivityIndicator />
+              <Text style={{ color: "#394046" }}>Caricamento…</Text>
+            </View>
+          )}
         </View>
-      </View>
+      </Card>
 
-      <Pressable className={btn} onPress={onGenerate} disabled={!valid || loading}>
-        <Text style={{ color: "#fff", fontWeight: "600" }}>Genera Itinerario</Text>
-      </Pressable>
-
-      {loading && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <ActivityIndicator />
-          <Text>Generazione in corso…</Text>
-        </View>
-      )}
-
-      {error && <Text style={{ color: "#b91c1c" }}>{error}</Text>}
-
+      {/* Risultato */}
       {data && (
-        <View style={{ gap: 8, padding: 12, borderRadius: 12, backgroundColor: "white" }}>
-          <Text style={{ fontWeight: "700" }}>
-            {data.city}, {data.country} • {data.days} giorni
+        <Card>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: theme.colors.text }}>
+            {data.city}, {data.country} • consigliati {data.recommendedDays} giorni
           </Text>
-          <Text style={{ opacity: 0.8 }}>{data.summary}</Text>
+          <Text style={{ color: "#394046", marginTop: 6 }}>{data.summary}</Text>
 
-          <Text style={{ fontWeight: "700", marginTop: 8 }}>Highlights</Text>
-          {data.highlights?.map((h, i) => (
-            <View key={i} style={{ marginBottom: 6 }}>
-              <Text style={{ fontWeight: "600" }}>{h.title}</Text>
-              <Text style={{ opacity: 0.8 }}>{h.description}</Text>
+          <Text style={{ marginTop: theme.spacing(2), fontWeight: "700", color: theme.colors.text }}>Highlights</Text>
+          {data.highlights.map((h, i) => (
+            <View key={i} style={{ marginTop: 8 }}>
+              <Text style={{ fontWeight: "600", color: theme.colors.text }}>{h.title}</Text>
+              <Text style={{ color: "#394046" }}>{h.description}</Text>
             </View>
           ))}
 
-          <Text style={{ fontWeight: "700", marginTop: 8 }}>Piatti tipici</Text>
-          {data.typicalDishes?.map((d, i) => (
-            <Text key={i} style={{ opacity: 0.8 }}>• {d.name}: {d.description}</Text>
+          <Text style={{ marginTop: theme.spacing(2), fontWeight: "700", color: theme.colors.text }}>Clima mensile</Text>
+          {data.monthlyClimate.map((m, i) => (
+            <Text key={i} style={{ color: "#394046", marginTop: 4 }}>
+              • {m.month}: {m.tMinC}–{m.tMaxC}°C, {m.precipitationMm} mm
+            </Text>
           ))}
 
-          <Text style={{ fontWeight: "700", marginTop: 8 }}>Meteo</Text>
-          <Text style={{ opacity: 0.8 }}>• {data.weather?.bestMonthsHint}</Text>
-          <Text style={{ opacity: 0.8 }}>• {data.weather?.temperatureHint}</Text>
-          <Text style={{ opacity: 0.8 }}>• {data.weather?.rainHint}</Text>
+          <Text style={{ marginTop: theme.spacing(2), fontWeight: "700", color: theme.colors.text }}>Valuta</Text>
+          <Text style={{ color: "#394046" }}>
+            {data.currency.name} ({data.currency.code}) {data.currency.symbol}
+            {data.currency.fxHint ? ` — ${data.currency.fxHint}` : ""}
+          </Text>
 
-          <Text style={{ fontWeight: "700", marginTop: 8 }}>Consigli</Text>
-          {data.practicalTips?.map((p, i) => (
-            <Text key={i} style={{ opacity: 0.8 }}>• {p}</Text>
+          <Text style={{ marginTop: theme.spacing(2), fontWeight: "700", color: theme.colors.text }}>
+            Ingresso (passaporto/visto)
+          </Text>
+          <Text style={{ color: "#394046" }}>
+            Passaporto: {data.entryRequirements.passportRequired ? "obbligatorio" : "non richiesto"} • Visto:{" "}
+            {data.entryRequirements.visaRequired ? "obbligatorio" : "non richiesto"}
+            {data.entryRequirements.eVisaAvailable !== undefined ? ` • eVisa: ${data.entryRequirements.eVisaAvailable ? "disponibile" : "no"}` : ""}
+            {data.entryRequirements.stayWithoutVisaDays ? ` • Soggiorno senza visto: ${data.entryRequirements.stayWithoutVisaDays}gg` : ""}
+          </Text>
+          {data.entryRequirements.notes ? <Text style={{ color: "#394046" }}>{data.entryRequirements.notes}</Text> : null}
+          {data.entryRequirements.sources?.length ? (
+            <View style={{ marginTop: 6 }}>
+              {data.entryRequirements.sources.map((s, i) => (
+                <Text key={i} style={{ color: "#394046" }}>• {s}</Text>
+              ))}
+            </View>
+          ) : null}
+
+          <Text style={{ marginTop: theme.spacing(2), fontWeight: "700", color: theme.colors.text }}>
+            Salute e vaccini
+          </Text>
+          {data.health?.vaccines?.length
+            ? data.health.vaccines.map((v, i) => (
+                <Text key={i} style={{ color: "#394046" }}>
+                  • {v.name} — {v.required ? "richiesto" : "consigliato"}: {v.recommendation}
+                </Text>
+              ))
+            : <Text style={{ color: "#394046" }}>—</Text>}
+          {data.health?.travelAdvisories?.length
+            ? data.health.travelAdvisories.map((t, i) => (
+                <Text key={i} style={{ color: "#394046" }}>• {t}</Text>
+              ))
+            : null}
+          {data.health?.sources?.length
+            ? data.health.sources.map((s, i) => (
+                <Text key={i} style={{ color: "#394046" }}>• {s}</Text>
+              ))
+            : null}
+
+          {!!data.officialSites?.length && (
+            <>
+              <Text style={{ marginTop: theme.spacing(2), fontWeight: "700", color: theme.colors.text }}>
+                Siti ufficiali
+              </Text>
+              {data.officialSites.map((o, i) => (
+                <Text key={i} style={{ color: "#394046" }}>• {o.label}: {o.url}</Text>
+              ))}
+            </>
+          )}
+
+          <Text style={{ marginTop: theme.spacing(2), fontWeight: "700", color: theme.colors.text }}>
+            Itinerario di coppia ({data.coupleItinerary.days} giorni)
+          </Text>
+          {data.coupleItinerary.plan.map((d) => (
+            <View key={d.day} style={{ marginTop: 8 }}>
+              <Text style={{ fontWeight: "600", color: theme.colors.text }}>Giorno {d.day}</Text>
+              <Text style={{ color: "#394046" }}>Mattina: {d.morning}</Text>
+              <Text style={{ color: "#394046" }}>Pranzo: {d.lunch}</Text>
+              <Text style={{ color: "#394046" }}>Pomeriggio: {d.afternoon}</Text>
+              <Text style={{ color: "#394046" }}>Cena: {d.dinner}</Text>
+              <Text style={{ color: "#394046" }}>Sera: {d.night}</Text>
+              {d.notes ? <Text style={{ color: "#394046" }}>Note: {d.notes}</Text> : null}
+            </View>
           ))}
-        </View>
+
+          <Text style={{ marginTop: theme.spacing(2), fontSize: 12, color: "#6b7280" }}>
+            Nota: visti, passaporti e vaccini possono cambiare. Verifica sempre sui siti ufficiali prima di viaggiare.
+          </Text>
+        </Card>
       )}
     </ScrollView>
   );

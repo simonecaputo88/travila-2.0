@@ -1,10 +1,13 @@
 import { View, Text } from "react-native";
-import Card from "../../components/ui/Card";
-export default function Profile(){ 
+import { Card } from "../../components/ui/Card";
+import { theme } from "../../theme";
+
+export default function Profile() {
   return (
-    <View className="flex-1 px-4 py-6 gap-4">
-      <Card title="Profile">
-        <Text className="opacity-70">Pagina profile in preparazione.</Text>
+    <View style={{ flex: 1, paddingHorizontal: theme.spacing(2), paddingVertical: theme.spacing(3), gap: theme.spacing(2) }}>
+      <Card>
+        <Text style={{ fontSize: 20, fontWeight: "700", color: theme.colors.text }}>Profile</Text>
+        <Text style={{ color: "#394046", marginTop: 6 }}>Pagina profile in preparazione.</Text>
       </Card>
     </View>
   );

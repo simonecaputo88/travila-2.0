@@ -1,9 +1,26 @@
-import { View, Text, ViewProps } from "react-native";
-export default function Card({ title, children, className }: ViewProps & { title?: string; className?: string }) {
+// apps/travila/components/ui/Card.tsx
+import { View, ViewProps, StyleProp, ViewStyle } from "react-native";
+import { theme } from "../../theme";
+
+type CardProps = Omit<ViewProps, "style"> & {
+  style?: StyleProp<ViewStyle>;
+};
+
+export function Card({ style, ...rest }: CardProps) {
   return (
-    <View className={`rounded-2xl p-4 shadow-lg bg-white/90 ${className || ""}`}>
-      {title ? <Text className="text-lg font-semibold mb-2">{title}</Text> : null}
-      {children}
-    </View>
+    <View
+      style={[
+        {
+          backgroundColor: theme.colors.white,
+          borderRadius: theme.radius.xl,
+          padding: theme.spacing(2),
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          ...theme.shadow.card,
+        },
+        style,
+      ]}
+      {...rest}
+    />
   );
 }

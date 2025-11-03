@@ -1,28 +1,22 @@
+// apps/travila/app/index.tsx
 import { Link } from "expo-router";
-import { View, Text, Pressable } from "react-native";
-import { cardClass, primaryBtn } from "../lib/theme";
+import { View, Text } from "react-native";
+import { Card } from "../components/ui/Card";
+import { PrimaryButton } from "../components/ui/PrimaryButton";
+import { theme } from "../theme";
 
 export default function Home() {
   return (
-    <View className="flex-1 px-4 py-6 gap-4">
-      <View className={cardClass}>
-        <Text className="text-2xl font-semibold mb-2">Benvenuto su Travila 2.0</Text>
-        <Text className="opacity-70">Il tuo travel planner AI personalizzato per Web, iOS e Android.</Text>
-      </View>
-
-      <View className="flex-row gap-3">
+    <View style={{ flex: 1, padding: theme.spacing(2), gap: theme.spacing(2) }}>
+      <Card>
+        <Text style={{ fontSize: 22, fontWeight: "700", color: theme.colors.text }}>Travila</Text>
+        <Text style={{ color: "#394046", marginTop: 6 }}>
+          Benvenuto! Questa è la home minimale. Clicca per generare un Itinerario Fast.
+        </Text>
         <Link href="/fast" asChild>
-          <Pressable className={primaryBtn}>
-            <Text className="text-white font-semibold">Itinerario Fast</Text>
-          </Pressable>
+          <PrimaryButton title="Vai a Itinerario Fast" style={{ marginTop: theme.spacing(2) }} />
         </Link>
-
-        <Link href="/pro" asChild>
-          <Pressable className="rounded-2xl px-4 py-3 border border-black/10 bg-white">
-            <Text className="font-semibold">Itinerario PRO</Text>
-          </Pressable>
-        </Link>
-      </View>
+      </Card>
     </View>
   );
 }

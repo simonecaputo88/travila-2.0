@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from "react-native";
+import { theme } from "../../theme";
 
 export default function LanguageToggle({
   label, value, onChange
@@ -7,23 +8,24 @@ export default function LanguageToggle({
   value: 'it' | 'en';
   onChange: (v: 'it' | 'en') => void;
 }) {
-  const base = "flex-1 rounded-2xl px-3 py-2 border border-black/10 items-center";
-  const active = "bg-black/5";
+  const pill = (active: boolean) => ({
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(1),
+    borderRadius: 999,
+    backgroundColor: active ? theme.colors.blue : theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  });
+
   return (
-    <View className="mb-3">
-      <Text className="mb-1 font-medium">{label}</Text>
-      <View className="flex-row gap-2">
-        <Pressable
-          className={`${base} ${value === 'it' ? active : ''}`}
-          onPress={() => onChange('it')}
-        >
-          <Text>Italiano</Text>
+    <View style={{ marginBottom: theme.spacing(2) }}>
+      <Text style={{ marginBottom: 6, fontWeight: "600", color: theme.colors.text }}>{label}</Text>
+      <View style={{ flexDirection: "row", gap: theme.spacing(1) }}>
+        <Pressable onPress={() => onChange('it')} style={pill(value === 'it')}>
+          <Text style={{ color: value === 'it' ? theme.colors.white : theme.colors.text }}>Italiano</Text>
         </Pressable>
-        <Pressable
-          className={`${base} ${value === 'en' ? active : ''}`}
-          onPress={() => onChange('en')}
-        >
-          <Text>English</Text>
+        <Pressable onPress={() => onChange('en')} style={pill(value === 'en')}>
+          <Text style={{ color: value === 'en' ? theme.colors.white : theme.colors.text }}>English</Text>
         </Pressable>
       </View>
     </View>

@@ -4,76 +4,110 @@ import { z } from 'zod';
 import { getOpenAI, OPENAI_MODEL } from '../services/openai';
 import { FastItinerarySchema } from '../utils/fast-schema';
 
-/** Validazione del body della richiesta */
 const bodySchema = z.object({
   locale: z.union([z.literal('it'), z.literal('en')]).default('it'),
   city: z.string().trim().min(1, 'city required'),
-  days: z.coerce.number().int().min(1, 'days must be >= 1').max(14, 'days must be <= 14'),
+  days: z.coerce.number().int().min(1, 'days must be >= 1').max(21, 'days must be <= 21'),
 });
 
-/** Prompt system: forza il modello a restituire SOLO JSON */
-const SYSTEM = `You are a senior travel planner that outputs ONLY strict JSON.
+const SYSTEM = `You are a senior travel planner that outputs ONLY strict JSON. 
 Do not include any prose, code fences, or explanations outside JSON.`;
 
-/** Prompt utente “a binari” con descrizione dello schema richiesto */
+// Prompt “binari” che chiede JSON 2.0 con le nuove sezioni
 function makePrompt(locale: 'it' | 'en', city: string, days: number) {
   const schema = {
-    schemaVersion: '1.0',
-    locale: 'it|en',
+    schemaVersion: '2.0',
+    locale: 'string (it|en)',
     city: 'string',
     country: 'string',
-    days: 'number (1-14)',
-    summary: 'string (1-2 sentences)',
+    summary: 'string (1-2 sentences, localized)',
     highlights: [
       {
         title: 'string',
-        description: 'string (max 2 sentences)',
-        coords: { lat: 'number', lon: 'number' },
+        description: 'string (<=2 sentences)',
+        coords: 'object { lat:number, lon:number } OR null',
         imageHint: 'string (short)',
       },
     ],
     typicalDishes: [{ name: 'string', description: 'string' }],
+    practicalTips: ['string (min 3 items)'],
+    monthlyClimate: [
+      {
+        month: 'string (localized month name)',
+        tMinC: 'number',
+        tMaxC: 'number',
+        precipitationMm: 'number',
+      },
+    ], // array MUST contain 12 entries (one per month)
+    currency: {
+      name: 'string',
+      code: 'string',
+      symbol: 'string',
+      fxHint: 'string (optional)',
+    },
+    entryRequirements: {
+      passportRequired: 'boolean',
+      visaRequired: 'boolean',
+      eVisaAvailable: 'boolean (optional)',
+      stayWithoutVisaDays: 'number (optional)',
+      notes: 'string (optional)',
+      sources: ['url (optional)'],
+    },
+    health: {
+      vaccines: [{ name: 'string', required: 'boolean', recommendation: 'string' }],
+      travelAdvisories: ['string'],
+      sources: ['url (optional)'],
+    },
+    officialSites: [{ label: 'string', url: 'url' }],
+    coupleItinerary: {
+      days: 'number (>=1)',
+      plan: [
+        {
+          day: 'number (>=1)',
+          morning: 'string',
+          lunch: 'string',
+          afternoon: 'string',
+          dinner: 'string',
+          night: 'string',
+          notes: 'string (optional)',
+        },
+      ],
+    },
+    recommendedDays: 'number (1-21)',
     weather: {
       bestMonthsHint: 'string',
       temperatureHint: 'string',
       rainHint: 'string',
     },
-    practicalTips: ['string'],
   };
 
-  const it = `Lingua di output: ${locale}.
-Genera un itinerario FAST per "${city}" (${days} giorni).
-DEVI restituire ESCLUSIVAMENTE un JSON valido e conforme allo schema seguente.
-Regole:
-- Nessun testo fuori dal JSON.
-- "country" deve essere il paese reale della città.
-- "highlights": 5–8 punti con descrizioni max 2 frasi.
-- "typicalDishes": almeno 2 piatti tipici con breve descrizione.
-- "weather": mesi migliori, temperatura e piogge in modo sintetico.
-- "practicalTips": 3–5 consigli pratici.
-- "coords" metti null se non sei sicuro.
-- "locale" deve essere "${locale}".
-- "schemaVersion" deve essere "1.0".
+  const baseRules = `
+- Output language: ${locale}.
+- Return ONLY a valid JSON object conforming to the schema provided (no extra text).
+- "schemaVersion" MUST be "2.0".
+- "locale" MUST be "${locale}".
+- "country" MUST be the real country for "${city}".
+- "monthlyClimate" MUST contain 12 entries (one per month) with average min/max temperatures (°C) and precipitation (mm).
+- "practicalTips" MUST contain at least 3 concise travel tips.
+- "recommendedDays": base it on city size and density of points of interest.
+- "coupleItinerary.days": choose a number consistent with "recommendedDays" (not necessarily equal to requested ${days}); 
+  the itinerary MUST have exactly "days" items in "plan".
+- If not confident about coordinates for a highlight, set "coords" to null.
+- For "entryRequirements", if uncertain, set conservative hints and include official sources in "sources" if you know them.
+- For "health.sources", prefer WHO/CDC/Ministero if you know them.
+`;
 
-Schema di riferimento:
+  const it = `Genera un itinerario FAST esteso per "${city}" (richiesta utente: ${days} giorni).
+${baseRules}
+
+Schema di riferimento (descrittivo, NON copiarlo letteralmente):
 ${JSON.stringify(schema, null, 2)}
 `;
 
-  const en = `Language: ${locale}.
-Generate a FAST itinerary for "${city}" (${days} days).
-You MUST return ONLY valid JSON that strictly conforms to the schema below.
-Rules:
-- No text outside JSON.
-- "country" must be the real country for the city.
-- "highlights": 5–8 items, each with up to 2-sentence descriptions.
-- "typicalDishes": at least 2 local dishes with short descriptions.
-- "weather": concise seasonal hints (best months, temperatures, rain).
-- "practicalTips": 3–5 practical bullets.
-- "coords": set to null if not confident.
-- "locale" must be "${locale}".
-- "schemaVersion" must be "1.0".
+  const en = `Generate an extended FAST itinerary for "${city}" (user requested: ${days} days).
+${baseRules}
 
-Reference schema:
+Reference schema (descriptive, DO NOT copy it literally):
 ${JSON.stringify(schema, null, 2)}
 `;
 
@@ -81,13 +115,7 @@ ${JSON.stringify(schema, null, 2)}
 }
 
 const plugin: FastifyPluginCallback = (app, _opts, done) => {
-  /**
-   * POST /api/itineraries/fast
-   * Body: { locale: 'it'|'en', city: string, days: number }
-   * Ritorna: JSON conforme a FastItinerarySchema
-   */
   app.post('/itineraries/fast', async (req, reply) => {
-    // 1) Validazione input (400 in caso di errore)
     const parsed = bodySchema.safeParse(req.body);
     if (!parsed.success) {
       reply.code(400);
@@ -95,15 +123,14 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
     }
     const { locale, city, days } = parsed.data;
 
-    // 2) Ottieni il client OpenAI (lazy init, così .env è già caricato)
     const openai = getOpenAI();
-
     let raw = '';
+
     try {
-      // 3) Tentativo con JSON mode (modelli che lo supportano)
+      // Primo tentativo: JSON mode
       try {
         const completion = await openai.chat.completions.create({
-          model: OPENAI_MODEL, // es. gpt-4o-mini, configurabile via .env
+          model: OPENAI_MODEL,
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: SYSTEM },
@@ -113,7 +140,7 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
         });
         raw = completion.choices[0]?.message?.content?.trim() ?? '';
       } catch {
-        // 4) Fallback: alcuni modelli non supportano response_format
+        // Fallback: senza JSON mode
         const completion = await openai.chat.completions.create({
           model: OPENAI_MODEL,
           messages: [
@@ -125,8 +152,8 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
         raw = completion.choices[0]?.message?.content?.trim() ?? '';
       }
 
-      // 5) Parse JSON (502 se non valido)
-      let parsedJson: unknown;
+      // Parse JSON
+      let parsedJson: any;
       try {
         parsedJson = JSON.parse(raw);
       } catch {
@@ -134,24 +161,35 @@ const plugin: FastifyPluginCallback = (app, _opts, done) => {
         return { error: 'LLM_JSON_INVALID', message: 'Output non JSON', raw };
       }
 
-      // 6) Validazione schema (502 se mismatch)
+      // ✅ Normalizzazione "practicalTips": garantiamo almeno 3 elementi
+      if (parsedJson && Array.isArray(parsedJson.practicalTips)) {
+        const fillers = [
+          'Acquista un’assicurazione di viaggio adeguata.',
+          'Tieni copie digitali di documenti importanti (passaporto, biglietti).',
+          'Controlla orari e biglietti in anticipo per le principali attrazioni.',
+          'Porta una power bank e una bottiglia riutilizzabile.',
+        ];
+        while (parsedJson.practicalTips.length < 3) {
+          parsedJson.practicalTips.push(fillers[parsedJson.practicalTips.length % fillers.length]);
+        }
+      }
+
+      // Validazione schema
       const validated = FastItinerarySchema.safeParse(parsedJson);
       if (!validated.success) {
         reply.code(502);
         return { error: 'LLM_SCHEMA_MISMATCH', issues: validated.error.format(), raw };
       }
 
-      // 7) OK
       return validated.data;
     } catch (err: any) {
-      // 8) Errori rete/LLM
       app.log.error({ err }, 'OPENAI_ERROR');
       reply.code(502);
       return { error: 'OPENAI_ERROR', message: err?.message ?? 'Unknown error' };
     }
   });
 
-  /** Stub PRO (rimane per sviluppo futuro) */
+  // Stub PRO per uso futuro
   app.post('/itineraries/pro', async (_req, _reply) => {
     return { content: 'TODO: PRO' };
   });

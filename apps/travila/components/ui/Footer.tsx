@@ -1,6 +1,10 @@
 import { View, Text } from "react-native";
-export default function Footer(){
+import { theme } from "../../theme";
+
+export default function Footer() {
   return (
-    <View className="px-4 py-4 opacity-70"><Text>© {new Date().getFullYear()} Travila</Text></View>
+    <View style={{ paddingHorizontal: theme.spacing(2), paddingVertical: theme.spacing(2), opacity: 0.7 }}>
+      <Text style={{ color: "#394046" }}>© {new Date().getFullYear()} Travila</Text>
+    </View>
   );
 }
